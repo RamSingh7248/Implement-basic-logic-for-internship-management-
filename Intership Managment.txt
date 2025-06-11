@@ -1,0 +1,106 @@
+public class Internship {
+    private String id;
+    private String title;
+    private String company;
+    private String description;
+    private boolean isApproved;
+
+    // Constructors, getters, setters
+}
+
+public class Student {
+    private String id;
+    private String name;
+    private List<InternshipApplication> applications = new ArrayList<>();
+
+    // Constructors, getters, setters
+}
+
+public class InternshipApplication {
+    private String id;
+    private Internship internship;
+    private Student student;
+    private ApplicationStatus status;
+
+    public enum ApplicationStatus {
+        PENDING, APPROVED, REJECTED
+    }
+
+    // Constructors, getters, setters
+}
+public interface InternshipRepository {
+    void save(Internship internship);
+    Internship findById(String id);
+    List<Internship> findAll();
+}
+
+public interface StudentRepository {
+    Student findById(String id);
+    void save(Student student);
+}
+public class InternshipService {
+
+    private final InternshipRepository internshipRepo;
+    private final StudentRepository studentRepo;
+
+    public InternshipService(InternshipRepository internshipRepo, StudentRepository studentRepo) {
+        this.internshipRepo = internshipRepo;
+        this.studentRepo = studentRepo;
+    }
+
+    public void createInternship(String title, String company, String description) {
+        Internship internship = new Internship();
+        internship.setId(UUID.randomUUID().toString());
+        internship.setTitle(title);
+        internship.setCompany(company);
+        internship.setDescription(description);
+        internship.setApproved(false);
+
+        internshipRepo.save(internship);
+    }
+
+    public void applyForInternship(String studentId, String internshipId) {
+        Student student = studentRepo.findById(studentId);
+        Internship internship = internshipRepo.findById(internshipId);
+
+        InternshipApplication application = new InternshipApplication();
+        application.setId(UUID.randomUUID().toString());
+        application.setStudent(student);
+        application.setInternship(internship);
+        application.setStatus(InternshipApplication.ApplicationStatus.PENDING);
+
+        student.getApplications().add(application);
+        studentRepo.save(student);
+    }
+
+    public void approveApplication(InternshipApplication application) {
+        application.setStatus(InternshipApplication.ApplicationStatus.APPROVED);
+        Internship internship = application.getInternship();
+        internship.setApproved(true);
+        internshipRepo.save(internship);
+    }
+
+    public List<Internship> getAllInternships() {
+        return internshipRepo.findAll();
+    }
+}
+public class Main {
+    public static void main(String[] args) {
+        InternshipRepository internshipRepo = new InMemoryInternshipRepository();
+        StudentRepository studentRepo = new InMemoryStudentRepository();
+
+        InternshipService service = new InternshipService(internshipRepo, studentRepo);
+
+        service.createInternship("Software Developer", "OpenAI", "6-month internship on GPT integration");
+
+        Student student = new Student();
+        student.setId("stu1");
+        student.setName("Alice");
+        studentRepo.save(student);
+
+        Internship internship = internshipRepo.findAll().get(0);
+        service.applyForInternship(student.getId(), internship.getId());
+
+        System.out.println("Internship applications for Alice: " + student.getApplications().size());
+    }
+}
